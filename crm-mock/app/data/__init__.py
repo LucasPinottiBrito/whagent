@@ -1,0 +1,1 @@
+"""Static CRM mock data."""
