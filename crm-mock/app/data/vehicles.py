@@ -12,7 +12,6 @@ VEHICLES = [
         "transmission": "automatico",
         "fuel": "flex",
         "status": "available",
-        "description": "Unico dono, revisoes em dia e pacote completo.",
     },
     {
         "id": "veh_002",
@@ -27,7 +26,6 @@ VEHICLES = [
         "transmission": "automatico",
         "fuel": "flex",
         "status": "available",
-        "description": "Sedan completo com laudo cautelar aprovado.",
     },
     {
         "id": "veh_003",
@@ -42,6 +40,5 @@ VEHICLES = [
         "transmission": "automatico",
         "fuel": "flex",
         "status": "available",
-        "description": "SUV com multimidia, garantia e baixa km.",
     },
 ]

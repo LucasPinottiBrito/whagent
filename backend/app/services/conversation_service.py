@@ -56,8 +56,8 @@ class ConversationService:
         direction: str,
         sender_type: str,
         content: str,
-        evolution_message_id: str | None,
-        raw_payload: dict | None,
+        evolution_message_id: str | None = None,
+        raw_payload: dict | None = None,
     ) -> Message:
         message = Message(
             conversation_id=conversation.id,

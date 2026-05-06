@@ -1,20 +1,11 @@
 # Workers
 
-Processos assincronos da plataforma. No MVP existe um worker de processamento de conversas pendentes.
+Worker simples que observa Redis e chama o endpoint interno do backend.
 
-## Responsabilidade
+Ele nao acessa PostgreSQL, OpenAI, Evolution API nem CRM mock.
 
-- consultar Redis em loop;
-- buscar conversas cujo debounce expirou;
-- adquirir lock por `conversation_id`;
-- chamar `POST /api/internal/conversations/{conversation_id}/process`;
-- remover da fila em caso de resposta 2xx;
-- liberar lock;
-- nao acessar o banco diretamente.
-
-## Rodar
-
-```bash
-cp workers/.env.example workers/.env
+```powershell
+Copy-Item .env.example .env
+python -m pip install -e .[dev]
 python -m app.main
 ```

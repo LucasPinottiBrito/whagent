@@ -1,11 +1,10 @@
 [project]
-name = "car-agent-workers"
+name = "whagent-workers"
 version = "0.1.0"
-description = "Async workers for the car agent platform"
+description = "Workers Redis do Whagent"
 requires-python = ">=3.11"
 dependencies = [
   "httpx>=0.27.0",
-  "pydantic>=2.7.0",
   "pydantic-settings>=2.3.0",
   "redis>=5.0.0",
 ]

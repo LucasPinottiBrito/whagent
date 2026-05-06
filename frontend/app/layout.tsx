@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./styles.css";
 
 export const metadata: Metadata = {
-  title: "Car Agent Platform",
-  description: "Painel SaaS para atendimento IA via WhatsApp",
+  title: "Whagent",
+  description: "Dashboard operacional do Whagent",
 };
 
 export default function RootLayout({

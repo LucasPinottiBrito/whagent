@@ -1,1 +1,1 @@
-"""Worker application package."""
+"""Whagent workers package."""

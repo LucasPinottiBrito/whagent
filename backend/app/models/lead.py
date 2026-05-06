@@ -30,5 +30,4 @@ class Lead(IdMixin, TimestampMixin, Base):
     trade_in_vehicle: Mapped[str | None] = mapped_column(String(180), nullable=True)
     interest_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    customer = relationship("Customer", back_populates="leads")
     conversation = relationship("Conversation", back_populates="lead")

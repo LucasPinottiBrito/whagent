@@ -1,1 +1,1 @@
-"""CRM mock service."""
+"""Whagent CRM mock package."""

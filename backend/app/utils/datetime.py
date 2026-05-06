@@ -1,5 +1,3 @@
-from datetime import datetime, timezone
+from app.models.base import utcnow
 
-
-def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+__all__ = ["utcnow"]

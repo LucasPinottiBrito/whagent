@@ -16,8 +16,7 @@ class Customer(IdMixin, TimestampMixin, Base):
     )
     phone: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
     name: Mapped[str | None] = mapped_column(String(160), nullable=True)
-    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     store = relationship("Store", back_populates="customers")
     conversations = relationship("Conversation", back_populates="customer")
-    leads = relationship("Lead", back_populates="customer")

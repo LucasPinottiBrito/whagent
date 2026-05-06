@@ -16,8 +16,8 @@ class HandoffService:
         salesperson_id: str | None = None,
         metadata: dict | None = None,
     ) -> HandoffEvent:
-        conversation.ai_enabled = False
         conversation.status = "human_active"
+        conversation.ai_enabled = False
         event = HandoffEvent(
             conversation_id=conversation.id,
             salesperson_id=salesperson_id,
@@ -29,6 +29,21 @@ class HandoffService:
         self.db.flush()
         return event
 
-    def release_to_ai(self, conversation: Conversation) -> None:
-        conversation.ai_enabled = True
+    def release_to_ai(
+        self,
+        conversation: Conversation,
+        *,
+        salesperson_id: str | None = None,
+        reason: str | None = None,
+    ) -> HandoffEvent:
         conversation.status = "ai_active"
+        conversation.ai_enabled = True
+        event = HandoffEvent(
+            conversation_id=conversation.id,
+            salesperson_id=salesperson_id,
+            event_type="release_to_ai",
+            reason=reason,
+        )
+        self.db.add(event)
+        self.db.flush()
+        return event

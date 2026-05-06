@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    app_name: str = "Car Agent Platform"
+    app_name: str = "Whagent Backend"
     app_env: str = "development"
     app_debug: bool = True
 
@@ -19,26 +19,32 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 1440
 
+    internal_api_key: str = "change-me"
+
     openai_api_key: str = ""
     default_openai_model: str = "gpt-4.1-mini"
+    ai_runtime_enabled: bool = True
 
     evolution_api_base_url: str = ""
     evolution_api_key: str = ""
+    webhook_public_base_url: str = "http://localhost:8000"
 
     crm_mock_base_url: str = "http://crm-mock:8001"
 
     redis_url: str = "redis://redis:6379/0"
     agent_debounce_seconds: int = 8
     conversation_lock_seconds: int = 60
-    worker_poll_interval_seconds: int = 1
-    worker_batch_size: int = 10
 
-    internal_api_key: str = "change-me"
+    debug_allow_from_me_as_inbound: bool = False
     cors_origins: str = "http://localhost:3000"
 
     @property
     def cors_origin_list(self) -> list[str]:
-        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+        return [item.strip() for item in self.cors_origins.split(",") if item.strip()]
+
+    @property
+    def is_production(self) -> bool:
+        return self.app_env.lower() in {"prod", "production"}
 
 
 @lru_cache

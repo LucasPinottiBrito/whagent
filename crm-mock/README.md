@@ -1,8 +1,13 @@
 # CRM Mock
 
-API FastAPI sem autenticacao e sem banco. Simula estoque, lojas e vendedores para o agente consultar durante o MVP.
+API FastAPI em memoria para simular estoque, lojas e vendedores.
 
-## Endpoints
+```powershell
+python -m pip install -e .[dev]
+uvicorn app.main:app --reload --port 8001
+```
+
+Endpoints:
 
 - `GET /health`
 - `GET /vehicles`
@@ -12,5 +17,3 @@ API FastAPI sem autenticacao e sem banco. Simula estoque, lojas e vendedores par
 - `GET /salespeople`
 - `GET /salespeople/{salesperson_id}`
 - `GET /salespeople/suggest`
-
-Os dados ficam em `app/data/vehicles.py`, `app/data/stores.py` e `app/data/salespeople.py`.

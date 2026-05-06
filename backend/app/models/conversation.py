@@ -22,7 +22,7 @@ class Conversation(IdMixin, TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(40), nullable=False, default="ai_active")
     ai_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     assigned_salesperson_id: Mapped[str | None] = mapped_column(
-        String(36), ForeignKey("salespeople.id"), nullable=True, index=True
+        String(36), ForeignKey("users.id"), nullable=True, index=True
     )
     last_intent: Mapped[str | None] = mapped_column(String(120), nullable=True)
     pending_agent_processing: Mapped[bool] = mapped_column(
@@ -34,13 +34,16 @@ class Conversation(IdMixin, TimestampMixin, Base):
     last_agent_processed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    last_agent_processed_message_id: Mapped[str | None] = mapped_column(
+        String(36), nullable=True
+    )
     last_processing_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     processing_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     store = relationship("Store", back_populates="conversations")
     customer = relationship("Customer", back_populates="conversations")
     whatsapp_instance = relationship("WhatsAppInstance", back_populates="conversations")
-    assigned_salesperson = relationship("Salesperson", back_populates="conversations")
+    assigned_salesperson = relationship("User", foreign_keys=[assigned_salesperson_id])
     messages = relationship("Message", back_populates="conversation")
     lead = relationship("Lead", back_populates="conversation", uselist=False)
     handoff_events = relationship("HandoffEvent", back_populates="conversation")

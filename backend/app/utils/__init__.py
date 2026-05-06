@@ -1,1 +1,1 @@
-"""Small reusable helpers."""
+"""Small backend utilities."""

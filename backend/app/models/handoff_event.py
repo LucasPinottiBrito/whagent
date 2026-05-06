@@ -12,11 +12,11 @@ class HandoffEvent(IdMixin, TimestampMixin, Base):
         String(36), ForeignKey("conversations.id"), nullable=False, index=True
     )
     salesperson_id: Mapped[str | None] = mapped_column(
-        String(36), ForeignKey("salespeople.id"), nullable=True, index=True
+        String(36), ForeignKey("users.id"), nullable=True, index=True
     )
     event_type: Mapped[str] = mapped_column(String(80), nullable=False)
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     event_metadata: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
 
     conversation = relationship("Conversation", back_populates="handoff_events")
-    salesperson = relationship("Salesperson", back_populates="handoff_events")
+    salesperson = relationship("User", foreign_keys=[salesperson_id])

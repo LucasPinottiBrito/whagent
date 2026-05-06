@@ -11,9 +11,9 @@ class User(IdMixin, TimestampMixin, Base):
     store_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("stores.id"), nullable=True, index=True
     )
-    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
     full_name: Mapped[str] = mapped_column(String(160), nullable=False)
-    role: Mapped[str] = mapped_column(String(30), nullable=False, default="salesperson")
+    role: Mapped[str] = mapped_column(String(30), nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 

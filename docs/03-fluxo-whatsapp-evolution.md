@@ -1,23 +1,25 @@
 # Fluxo WhatsApp Evolution
 
-Entrada:
+Endpoint:
 
 ```txt
 POST /api/webhooks/evolution/{instance_name}
 ```
 
-Ao receber mensagem inbound:
+Seguranca:
 
-1. validar payload;
-2. identificar instancia WhatsApp;
-3. identificar ou criar cliente;
-4. identificar ou criar conversa;
-5. salvar mensagem inbound;
-6. atualizar `last_customer_message_at`;
-7. marcar `pending_agent_processing=true`;
-8. agendar `conversation_id` no Redis;
-9. retornar 200 rapidamente.
+- header `X-Evolution-Webhook-Secret`; ou
+- query param `webhook_secret`.
 
-O webhook nao chama OpenAI diretamente.
+Fluxo:
 
-Se `fromMe=true` e a mensagem nao foi marcada como enviada pelo agente, o backend considera takeover humano, salva mensagem outbound `human`, desativa IA e registra `handoff_event`.
+1. backend localiza a instancia ativa;
+2. valida o segredo;
+3. parseia `remoteJid`, texto, `fromMe`, id externo e nome;
+4. deduplica por `evolution_message_id` quando existir;
+5. cria ou reutiliza customer e conversation;
+6. salva mensagem inbound ou outbound humana;
+7. agenda Redis apenas quando a IA esta ativa;
+8. retorna status sem chamar o agente.
+
+Eco do agente com `source=agent` ou `sent_by_agent=true` e ignorado.

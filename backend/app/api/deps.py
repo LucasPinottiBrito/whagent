@@ -6,9 +6,9 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.database import get_session
 from app.core.security import decode_access_token
-from app.models import User
+from app.models import Conversation, User
 from app.services.agent_service import AgentService
-from app.services.conversation_queue import ConversationQueue
+from app.services.conversation_queue_service import ConversationQueueService
 from app.services.evolution_service import EvolutionService
 
 
@@ -19,15 +19,20 @@ def get_db():
     yield from get_session()
 
 
-def get_conversation_queue() -> ConversationQueue:
+def get_conversation_queue_service() -> ConversationQueueService:
     settings = get_settings()
-    return ConversationQueue.from_url(
-        settings.redis_url, debounce_seconds=settings.agent_debounce_seconds
+    return ConversationQueueService.from_url(
+        redis_url=settings.redis_url,
+        debounce_seconds=settings.agent_debounce_seconds,
     )
 
 
 def get_agent_service() -> AgentService:
-    return AgentService(settings=get_settings())
+    settings = get_settings()
+    return AgentService(
+        openai_api_key=settings.openai_api_key,
+        model=settings.default_openai_model,
+    )
 
 
 def get_evolution_service() -> EvolutionService:
@@ -39,9 +44,10 @@ def get_evolution_service() -> EvolutionService:
 
 
 def get_current_user(
-    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
 ) -> User:
-    credentials_exception = HTTPException(
+    credentials_error = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
@@ -50,11 +56,21 @@ def get_current_user(
         payload = decode_access_token(token)
         user_id = payload.get("sub")
         if not user_id:
-            raise credentials_exception
+            raise credentials_error
     except jwt.PyJWTError as exc:
-        raise credentials_exception from exc
+        raise credentials_error from exc
 
     user = db.get(User, user_id)
     if not user or not user.is_active:
-        raise credentials_exception
+        raise credentials_error
     return user
+
+
+def require_conversation_access(
+    conversation: Conversation, current_user: User
+) -> None:
+    allowed_roles = {"admin", "manager", "salesperson"}
+    if current_user.role not in allowed_roles:
+        raise HTTPException(status_code=403, detail="role not allowed")
+    if current_user.store_id and current_user.store_id != conversation.store_id:
+        raise HTTPException(status_code=403, detail="conversation belongs to another store")

@@ -9,7 +9,7 @@ class Store(IdMixin, TimestampMixin, Base):
     __tablename__ = "stores"
 
     name: Mapped[str] = mapped_column(String(160), nullable=False)
-    slug: Mapped[str] = mapped_column(String(120), unique=True, index=True, nullable=False)
+    slug: Mapped[str] = mapped_column(String(120), nullable=False, unique=True, index=True)
     document: Mapped[str | None] = mapped_column(String(40), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
 
@@ -17,4 +17,3 @@ class Store(IdMixin, TimestampMixin, Base):
     whatsapp_instances = relationship("WhatsAppInstance", back_populates="store")
     customers = relationship("Customer", back_populates="store")
     conversations = relationship("Conversation", back_populates="store")
-    salespeople = relationship("Salesperson", back_populates="store")

@@ -12,11 +12,12 @@ class WhatsAppInstance(IdMixin, TimestampMixin, Base):
         String(36), ForeignKey("stores.id"), nullable=False, index=True
     )
     instance_name: Mapped[str] = mapped_column(
-        String(120), unique=True, index=True, nullable=False
+        String(120), nullable=False, unique=True, index=True
     )
     phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
     evolution_instance_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
-    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    webhook_secret: Mapped[str] = mapped_column(String(160), nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     store = relationship("Store", back_populates="whatsapp_instances")
     conversations = relationship("Conversation", back_populates="whatsapp_instance")

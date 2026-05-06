@@ -16,7 +16,7 @@ class AgentRun(IdMixin, TimestampMixin, Base):
     model: Mapped[str | None] = mapped_column(String(120), nullable=True)
     tools_used: Mapped[list | None] = mapped_column(JSON, nullable=True)
     raw_response: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    status: Mapped[str] = mapped_column(String(40), nullable=False, default="succeeded")
+    status: Mapped[str] = mapped_column(String(40), nullable=False)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     conversation = relationship("Conversation", back_populates="agent_runs")

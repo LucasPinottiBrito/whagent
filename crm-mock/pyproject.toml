@@ -1,11 +1,12 @@
 [project]
-name = "car-agent-crm-mock"
+name = "whagent-crm-mock"
 version = "0.1.0"
-description = "Static CRM mock API for the car agent platform"
+description = "CRM mock em memoria para o Whagent"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.115.0",
   "uvicorn[standard]>=0.30.0",
+  "pydantic>=2.7.0",
 ]
 
 [project.optional-dependencies]

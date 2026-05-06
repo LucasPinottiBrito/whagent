@@ -1,7 +1,7 @@
 [project]
-name = "car-agent-backend"
+name = "whagent-backend"
 version = "0.1.0"
-description = "Backend FastAPI for WhatsApp car sales AI agent SaaS"
+description = "Backend FastAPI do Whagent"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.115.0",
@@ -12,16 +12,17 @@ dependencies = [
   "pydantic-settings>=2.3.0",
   "psycopg[binary]>=3.2.0",
   "bcrypt>=4.0.0",
-  "passlib[bcrypt]>=1.7.4",
   "PyJWT>=2.8.0",
-  "openai>=1.68.0",
   "httpx>=0.27.0",
   "redis>=5.0.0",
+  "openai>=1.68.0",
 ]
 
 [project.optional-dependencies]
 dev = [
   "pytest>=8.0.0",
+  "pytest-asyncio>=0.23.0",
+  "httpx>=0.27.0",
 ]
 
 [tool.pytest.ini_options]

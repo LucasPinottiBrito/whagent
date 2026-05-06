@@ -2,13 +2,12 @@ import os
 
 from sqlalchemy import select
 
-from app.core.database import Base, SessionLocal, engine
+from app.core.database import SessionLocal
 from app.core.security import hash_password
-from app.models import Salesperson, Store, User, WhatsAppInstance
+from app.models import Store, User, WhatsAppInstance
 
 
 def seed() -> None:
-    Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
         store = db.scalar(select(Store).where(Store.slug == "loja-demo"))
@@ -16,40 +15,11 @@ def seed() -> None:
             store = Store(
                 name="Loja Demo",
                 slug="loja-demo",
+                document="00000000000100",
                 phone="5511999999999",
             )
             db.add(store)
             db.flush()
-
-        instance = db.scalar(
-            select(WhatsAppInstance).where(
-                WhatsAppInstance.instance_name == "demo-instance"
-            )
-        )
-        if instance is None:
-            db.add(
-                WhatsAppInstance(
-                    store_id=store.id,
-                    instance_name="demo-instance",
-                    phone="5511999999999",
-                    active=True,
-                )
-            )
-
-        salesperson = db.scalar(
-            select(Salesperson).where(Salesperson.email == "ana@example.com")
-        )
-        if salesperson is None:
-            db.add(
-                Salesperson(
-                    store_id=store.id,
-                    name="Ana Vendedora",
-                    email="ana@example.com",
-                    phone="5511988887777",
-                    active=True,
-                    specialty="sedans",
-                )
-            )
 
         admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
         admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
@@ -66,8 +36,36 @@ def seed() -> None:
                 )
             )
 
+        seller = db.scalar(select(User).where(User.email == "seller@example.com"))
+        if seller is None:
+            db.add(
+                User(
+                    store_id=store.id,
+                    email="seller@example.com",
+                    full_name="Vendedor Demo",
+                    role="salesperson",
+                    hashed_password=hash_password("seller123"),
+                    is_active=True,
+                )
+            )
+
+        instance = db.scalar(
+            select(WhatsAppInstance).where(
+                WhatsAppInstance.instance_name == "demo-instance"
+            )
+        )
+        if instance is None:
+            db.add(
+                WhatsAppInstance(
+                    store_id=store.id,
+                    instance_name="demo-instance",
+                    phone="5511999999999",
+                    webhook_secret="dev-evolution-webhook-secret",
+                    active=True,
+                )
+            )
         db.commit()
-        print("Seed concluido: admin, loja demo e instancia demo prontos.")
+        print("Seed demo criado: loja, admin, vendedor e instancia WhatsApp.")
     finally:
         db.close()
 

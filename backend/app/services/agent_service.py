@@ -5,14 +5,64 @@ from typing import Any
 
 try:
     from openai import OpenAI
-except ImportError:  # pragma: no cover - dependency exists in container images
+except ImportError:  # pragma: no cover
     OpenAI = None
 
-from app.agents.prompts import CAR_SALES_AGENT_PROMPT
-from app.agents.tools import AGENT_RESPONSE_FORMAT, SEARCH_VEHICLES_TOOL
-from app.core.config import Settings, get_settings
-from app.models import Conversation
+from app.core.config import get_settings
 from app.services.crm_mock_client import CrmMockClient
+
+
+AGENT_PROMPT = """
+Voce e um atendente de loja de carros no WhatsApp.
+Responda em portugues do Brasil com mensagens curtas e naturais.
+Qualifique o lead perguntando objetivamente sobre modelo, orcamento, pagamento e troca.
+Nunca invente veiculos, precos, anos ou disponibilidade fora do retorno do CRM.
+Retorne JSON com os campos solicitados.
+"""
+
+SEARCH_VEHICLES_TOOL = {
+    "type": "function",
+    "name": "search_vehicles",
+    "description": "Consulta veiculos disponiveis no CRM mock.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "brand": {"type": "string"},
+            "model": {"type": "string"},
+            "year_min": {"type": "integer"},
+            "year_max": {"type": "integer"},
+            "min_price": {"type": "number"},
+            "max_price": {"type": "number"},
+            "transmission": {"type": "string"},
+            "fuel": {"type": "string"},
+            "status": {"type": "string"},
+        },
+        "additionalProperties": False,
+    },
+}
+
+AGENT_RESPONSE_FORMAT = {
+    "type": "json_schema",
+    "name": "whagent_agent_response",
+    "strict": False,
+    "schema": {
+        "type": "object",
+        "properties": {
+            "reply_text": {"type": "string"},
+            "intent": {"type": "string"},
+            "lead_status": {"type": "string"},
+            "score": {"type": "integer"},
+            "vehicle_interest": {"type": ["string", "null"]},
+            "budget_min": {"type": ["number", "null"]},
+            "budget_max": {"type": ["number", "null"]},
+            "payment_type": {"type": ["string", "null"]},
+            "trade_in_vehicle": {"type": ["string", "null"]},
+            "interest_summary": {"type": ["string", "null"]},
+        },
+        "required": ["reply_text"],
+        "additionalProperties": True,
+    },
+}
 
 
 @dataclass
@@ -29,44 +79,53 @@ class AgentResult:
     interest_summary: str | None = None
     tools_used: list[str] = field(default_factory=list)
     raw_response: dict[str, Any] = field(default_factory=dict)
+    model: str | None = None
 
 
 class AgentService:
     def __init__(
         self,
         *,
-        settings: Settings | None = None,
+        openai_api_key: str | None = None,
+        model: str | None = None,
         crm_client: CrmMockClient | None = None,
     ):
-        self.settings = settings or get_settings()
-        self.crm_client = crm_client or CrmMockClient(self.settings.crm_mock_base_url)
+        settings = get_settings()
+        self.openai_api_key = openai_api_key if openai_api_key is not None else settings.openai_api_key
+        self.model = model or settings.default_openai_model
+        self.crm_client = crm_client or CrmMockClient(settings.crm_mock_base_url)
         self.client = (
-            OpenAI(api_key=self.settings.openai_api_key)
-            if OpenAI and self.settings.openai_api_key
+            OpenAI(api_key=self.openai_api_key)
+            if OpenAI is not None and self.openai_api_key
             else None
         )
 
-    def run(self, *, conversation: Conversation, customer_input: str) -> AgentResult:
-        if not self.client:
+    def run(self, *, customer_input: str, context: dict | None = None) -> AgentResult:
+        if self.client is None:
             return self._fallback_response(customer_input)
+        return self._openai_response(customer_input, context or {})
 
+    def _openai_response(self, customer_input: str, context: dict) -> AgentResult:
         response = self.client.responses.create(
-            model=self.settings.default_openai_model,
-            instructions=CAR_SALES_AGENT_PROMPT,
-            input=customer_input,
+            model=self.model,
+            instructions=AGENT_PROMPT,
+            input=[
+                {"role": "developer", "content": json.dumps(context, ensure_ascii=True)},
+                {"role": "user", "content": customer_input},
+            ],
             tools=[SEARCH_VEHICLES_TOOL],
             text={"format": AGENT_RESPONSE_FORMAT},
         )
-        tools_used = []
-
-        tool_outputs = []
+        tools_used: list[str] = []
+        tool_outputs: list[dict] = []
         for item in getattr(response, "output", []) or []:
             if getattr(item, "type", None) != "function_call":
                 continue
-            if item.name != "search_vehicles":
+            if getattr(item, "name", None) != "search_vehicles":
                 continue
             tools_used.append("search_vehicles")
-            args = json.loads(item.arguments or "{}")
+            args = json.loads(getattr(item, "arguments", "{}") or "{}")
+            args.setdefault("status", "available")
             result = self.crm_client.search_vehicles(**args)
             tool_outputs.append(
                 {
@@ -78,16 +137,17 @@ class AgentService:
 
         if tool_outputs:
             response = self.client.responses.create(
-                model=self.settings.default_openai_model,
-                instructions=CAR_SALES_AGENT_PROMPT,
+                model=self.model,
+                instructions=AGENT_PROMPT,
                 previous_response_id=response.id,
                 input=tool_outputs,
                 text={"format": AGENT_RESPONSE_FORMAT},
             )
 
-        payload = self._parse_output_text(getattr(response, "output_text", ""))
-        payload.setdefault("tools_used", tools_used)
-        payload.setdefault("raw_response", {"id": getattr(response, "id", None)})
+        payload = self._parse_payload(getattr(response, "output_text", ""))
+        payload["tools_used"] = tools_used
+        payload["raw_response"] = {"id": getattr(response, "id", None)}
+        payload["model"] = self.model
         return self._result_from_payload(payload)
 
     def _fallback_response(self, customer_input: str) -> AgentResult:
@@ -99,38 +159,39 @@ class AgentService:
 
         vehicle = vehicles[0] if vehicles else None
         if vehicle:
+            vehicle_name = f"{vehicle['brand']} {vehicle['model']}"
             reply = (
-                f"Encontrei um {vehicle['brand']} {vehicle['model']} "
-                f"{vehicle['year']} por R$ {vehicle['price']}. "
-                "Voce pretende comprar a vista, financiar ou tem veiculo para troca?"
+                f"Temos um {vehicle_name} {vehicle['year']} disponivel. "
+                "Voce pretende pagar a vista, financiar ou tem carro para troca?"
             )
-            vehicle_interest = f"{vehicle['brand']} {vehicle['model']}"
-        else:
-            reply = (
-                "Posso te ajudar a encontrar o carro ideal. "
-                "Qual modelo, faixa de preco e forma de pagamento voce prefere?"
+            return AgentResult(
+                reply_text=reply,
+                intent="vehicle_search",
+                lead_status="new",
+                score=50,
+                vehicle_interest=vehicle_name,
+                interest_summary=customer_input,
+                tools_used=["search_vehicles"],
+                raw_response={"mode": "fallback"},
+                model="fallback",
             )
-            vehicle_interest = None
 
         return AgentResult(
-            reply_text=reply,
-            intent="vehicle_search" if vehicle else "qualification",
+            reply_text=(
+                "Posso te ajudar a encontrar o carro ideal. "
+                "Qual modelo, faixa de preco e forma de pagamento voce prefere?"
+            ),
+            intent="qualification",
             lead_status="new",
-            score=50,
-            vehicle_interest=vehicle_interest,
+            score=20,
             interest_summary=customer_input,
-            tools_used=["search_vehicles"] if vehicle else [],
             raw_response={"mode": "fallback"},
+            model="fallback",
         )
 
-    def _parse_output_text(self, output_text: str) -> dict[str, Any]:
+    def _parse_payload(self, output_text: str) -> dict[str, Any]:
         if not output_text:
-            return {
-                "reply_text": (
-                    "Recebi sua mensagem. Pode me dizer qual modelo e faixa de preco "
-                    "voce procura?"
-                )
-            }
+            return {"reply_text": "Pode me dizer qual modelo e faixa de preco voce procura?"}
         try:
             return json.loads(output_text)
         except json.JSONDecodeError:
@@ -150,4 +211,5 @@ class AgentService:
             interest_summary=payload.get("interest_summary"),
             tools_used=payload.get("tools_used") or [],
             raw_response=payload.get("raw_response") or {},
+            model=payload.get("model") or self.model,
         )
