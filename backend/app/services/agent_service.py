@@ -100,19 +100,20 @@ class AgentService:
             else None
         )
 
-    def run(self, *, customer_input: str, context: dict | None = None) -> AgentResult:
+    def run(self, *, customer_input: str, context: dict | None = None, history: list[dict] | None = None) -> AgentResult:
         if self.client is None:
             return self._fallback_response(customer_input)
-        return self._openai_response(customer_input, context or {})
+        return self._openai_response(customer_input, context or {}, history or [])
 
-    def _openai_response(self, customer_input: str, context: dict) -> AgentResult:
+    def _openai_response(self, customer_input: str, context: dict, history: list[dict]) -> AgentResult:
+        messages = [{"role": "developer", "content": json.dumps(context, ensure_ascii=True)}]
+        messages.extend(history)
+        messages.append({"role": "user", "content": customer_input})
+
         response = self.client.responses.create(
             model=self.model,
             instructions=AGENT_PROMPT,
-            input=[
-                {"role": "developer", "content": json.dumps(context, ensure_ascii=True)},
-                {"role": "user", "content": customer_input},
-            ],
+            input=messages,
             tools=[SEARCH_VEHICLES_TOOL],
             text={"format": AGENT_RESPONSE_FORMAT},
         )

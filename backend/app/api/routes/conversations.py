@@ -199,6 +199,37 @@ def release_to_ai(
     }
 
 
+@router.post("/{conversation_id}/archive")
+def archive_conversation(
+    conversation_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    conversation = db.get(Conversation, conversation_id)
+    if conversation is None:
+        raise HTTPException(status_code=404, detail="conversation not found")
+    require_conversation_access(conversation, current_user)
+    conversation.status = "archived"
+    conversation.ai_enabled = False
+    db.commit()
+    return {"status": "archived", "conversation_id": conversation.id}
+
+
+@router.delete("/{conversation_id}")
+def delete_conversation(
+    conversation_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    conversation = db.get(Conversation, conversation_id)
+    if conversation is None:
+        raise HTTPException(status_code=404, detail="conversation not found")
+    require_conversation_access(conversation, current_user)
+    db.delete(conversation)
+    db.commit()
+    return {"status": "deleted", "conversation_id": conversation_id}
+
+
 def _conversation_summary(db: Session, conversation: Conversation) -> dict:
     last_message = db.scalar(
         select(Message)

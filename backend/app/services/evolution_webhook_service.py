@@ -86,6 +86,24 @@ class EvolutionWebhookService:
 
         try:
             if origin == MessageOrigin.HUMAN_OUTBOUND_TAKEOVER:
+                # Fallback to detect agent echoes if the webhook arrives before the 
+                # API response is fully processed or if evolution doesn't attach source
+                is_agent_echo = self.db.scalar(
+                    select(Message.id).where(
+                        Message.conversation_id == conversation.id,
+                        Message.direction == "outbound",
+                        Message.sender_type == "agent",
+                        Message.content == parsed.text,
+                    ).order_by(Message.created_at.desc()).limit(1)
+                )
+                if is_agent_echo:
+                    self.db.commit()
+                    return {
+                        "status": "ignored_agent_echo_matched_by_text",
+                        "conversation_id": conversation.id,
+                        "message_id": parsed.message_id,
+                    }
+
                 conversation_service.add_message(
                     conversation=conversation,
                     direction="outbound",

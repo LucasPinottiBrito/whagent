@@ -4,12 +4,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import (
     auth,
     conversations,
+    customers,
     dashboard,
     health,
     internal,
     leads,
     setup,
     store,
+    users,
     webhooks,
     whatsapp_instances,
 )
@@ -39,8 +41,11 @@ app.include_router(webhooks.router, prefix="/api")
 app.include_router(internal.router, prefix="/api")
 app.include_router(conversations.router, prefix="/api")
 app.include_router(leads.router, prefix="/api")
+app.include_router(users.router, prefix="/api")
+app.include_router(customers.router, prefix="/api")
 
 if not settings.is_production:
     from app.api.routes import debug
 
     app.include_router(debug.router, prefix="/api")
+

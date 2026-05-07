@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.models import Lead, User
+from app.schemas.crud import LeadUpdateRequest
 
 
 router = APIRouter(prefix="/leads", tags=["leads"])
@@ -35,6 +36,47 @@ def get_lead(
     return _lead_response(lead)
 
 
+@router.patch("/{lead_id}")
+def update_lead(
+    lead_id: str,
+    payload: LeadUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    lead = db.get(Lead, lead_id)
+    if lead is None:
+        raise HTTPException(status_code=404, detail="lead not found")
+    if current_user.store_id and lead.store_id != current_user.store_id:
+        raise HTTPException(status_code=403, detail="lead belongs to another store")
+    for field in (
+        "status", "score", "intent", "vehicle_interest",
+        "budget_min", "budget_max", "payment_type",
+        "trade_in_vehicle", "interest_summary",
+    ):
+        value = getattr(payload, field, None)
+        if value is not None:
+            setattr(lead, field, value)
+    db.commit()
+    db.refresh(lead)
+    return _lead_response(lead)
+
+
+@router.delete("/{lead_id}")
+def delete_lead(
+    lead_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    lead = db.get(Lead, lead_id)
+    if lead is None:
+        raise HTTPException(status_code=404, detail="lead not found")
+    if current_user.store_id and lead.store_id != current_user.store_id:
+        raise HTTPException(status_code=403, detail="lead belongs to another store")
+    db.delete(lead)
+    db.commit()
+    return {"status": "deleted", "lead_id": lead_id}
+
+
 def _lead_response(lead: Lead) -> dict:
     customer = lead.conversation.customer if lead.conversation else None
     return {
@@ -61,3 +103,4 @@ def _lead_response(lead: Lead) -> dict:
         "created_at": lead.created_at,
         "updated_at": lead.updated_at,
     }
+

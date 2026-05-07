@@ -1,3 +1,4 @@
+import logging
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,10 +9,23 @@ from app.api.deps import get_current_user, get_db, get_evolution_service
 from app.core.config import get_settings
 from app.models import User, WhatsAppInstance
 from app.schemas.dashboard import WhatsAppInstanceCreateRequest
-from app.services.evolution_service import EvolutionService
+from app.services.evolution_service import (
+    EvolutionApiError,
+    EvolutionConfigError,
+    EvolutionService,
+)
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/whatsapp-instances", tags=["whatsapp instances"])
+
+
+def _handle_evolution_error(exc: Exception) -> HTTPException:
+    if isinstance(exc, EvolutionConfigError):
+        return HTTPException(status_code=503, detail=str(exc))
+    if isinstance(exc, EvolutionApiError):
+        return HTTPException(status_code=502, detail=str(exc))
+    return HTTPException(status_code=500, detail="unexpected evolution error")
 
 
 @router.get("")
@@ -56,12 +70,18 @@ def create_instance(
     db.add(instance)
     db.flush()
 
-    evolution = evolution_service.create_instance(
-        instance_name=instance.instance_name,
-        phone=instance.phone,
-        webhook_url=webhook_url,
-        webhook_secret=instance.webhook_secret,
-    )
+    try:
+        evolution = evolution_service.create_instance(
+            instance_name=instance.instance_name,
+            phone=instance.phone,
+            webhook_url=webhook_url,
+            webhook_secret=instance.webhook_secret,
+        )
+    except (EvolutionConfigError, EvolutionApiError) as exc:
+        logger.error("Evolution create_instance failed: %s", exc)
+        db.rollback()
+        raise _handle_evolution_error(exc) from exc
+
     instance.evolution_instance_id = _extract_evolution_instance_id(evolution)
     db.commit()
     db.refresh(instance)
@@ -85,6 +105,40 @@ def get_instance(
     return response
 
 
+@router.patch("/{instance_id}")
+def update_instance(
+    instance_id: str,
+    payload: WhatsAppInstanceCreateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    instance = _get_instance_for_user(db, instance_id, current_user)
+    if payload.instance_name:
+        instance.instance_name = payload.instance_name.strip()
+    if payload.phone is not None:
+        instance.phone = payload.phone
+    db.commit()
+    db.refresh(instance)
+    return _instance_response(instance)
+
+
+@router.delete("/{instance_id}")
+def delete_instance(
+    instance_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    evolution_service: EvolutionService = Depends(get_evolution_service),
+):
+    instance = _get_instance_for_user(db, instance_id, current_user)
+    try:
+        evolution_service.delete_instance(instance.instance_name)
+    except (EvolutionConfigError, EvolutionApiError) as exc:
+        logger.warning("Evolution delete_instance failed (proceeding with DB delete): %s", exc)
+    db.delete(instance)
+    db.commit()
+    return {"status": "deleted", "instance_id": instance_id}
+
+
 @router.post("/{instance_id}/connect")
 def connect_instance(
     instance_id: str,
@@ -93,7 +147,10 @@ def connect_instance(
     evolution_service: EvolutionService = Depends(get_evolution_service),
 ):
     instance = _get_instance_for_user(db, instance_id, current_user)
-    return evolution_service.connect_instance(instance.instance_name, instance.phone)
+    try:
+        return evolution_service.connect_instance(instance.instance_name, instance.phone)
+    except (EvolutionConfigError, EvolutionApiError) as exc:
+        raise _handle_evolution_error(exc) from exc
 
 
 @router.post("/{instance_id}/sync-status")
@@ -104,7 +161,10 @@ def sync_status(
     evolution_service: EvolutionService = Depends(get_evolution_service),
 ):
     instance = _get_instance_for_user(db, instance_id, current_user)
-    result = evolution_service.get_connection_state(instance.instance_name)
+    try:
+        result = evolution_service.get_connection_state(instance.instance_name)
+    except (EvolutionConfigError, EvolutionApiError) as exc:
+        raise _handle_evolution_error(exc) from exc
     state = _extract_connection_state(result)
     return {"state": state, "evolution": result}
 
@@ -117,11 +177,14 @@ def sync_webhook(
     evolution_service: EvolutionService = Depends(get_evolution_service),
 ):
     instance = _get_instance_for_user(db, instance_id, current_user)
-    return evolution_service.configure_webhook(
-        instance_name=instance.instance_name,
-        webhook_url=_webhook_url(instance.instance_name, instance.webhook_secret),
-        webhook_secret=instance.webhook_secret,
-    )
+    try:
+        return evolution_service.configure_webhook(
+            instance_name=instance.instance_name,
+            webhook_url=_webhook_url(instance.instance_name, instance.webhook_secret),
+            webhook_secret=instance.webhook_secret,
+        )
+    except (EvolutionConfigError, EvolutionApiError) as exc:
+        raise _handle_evolution_error(exc) from exc
 
 
 @router.post("/{instance_id}/restart")
@@ -132,8 +195,11 @@ def restart_instance(
     evolution_service: EvolutionService = Depends(get_evolution_service),
 ):
     instance = _get_instance_for_user(db, instance_id, current_user)
+    try:
+        result = evolution_service.restart_instance(instance.instance_name)
+    except (EvolutionConfigError, EvolutionApiError) as exc:
+        raise _handle_evolution_error(exc) from exc
     instance.active = True
-    result = evolution_service.restart_instance(instance.instance_name)
     db.commit()
     return result
 
@@ -146,7 +212,10 @@ def logout_instance(
     evolution_service: EvolutionService = Depends(get_evolution_service),
 ):
     instance = _get_instance_for_user(db, instance_id, current_user)
-    result = evolution_service.logout_instance(instance.instance_name)
+    try:
+        result = evolution_service.logout_instance(instance.instance_name)
+    except (EvolutionConfigError, EvolutionApiError) as exc:
+        raise _handle_evolution_error(exc) from exc
     instance.active = False
     db.commit()
     return result
@@ -197,3 +266,4 @@ def _extract_connection_state(payload: dict) -> str | None:
     if isinstance(instance, dict):
         return instance.get("state") or instance.get("connectionStatus")
     return payload.get("state") if isinstance(payload, dict) else None
+

@@ -53,6 +53,15 @@ class ConversationProcessingService:
         self.db.flush()
 
         try:
+            # Get history excluding the current pending messages
+            history_messages = self._conversation_history(conversation)
+            pending_ids = {m.id for m in pending_messages}
+            history = []
+            for m in history_messages:
+                if m.id not in pending_ids and m.content:
+                    role = "assistant" if m.sender_type == "agent" else "user"
+                    history.append({"role": role, "content": m.content})
+
             result = self.agent_service.run(
                 customer_input=input_text,
                 context={
@@ -60,6 +69,7 @@ class ConversationProcessingService:
                     "conversation_id": conversation.id,
                     "customer_phone": conversation.customer.phone,
                 },
+                history=history,
             )
             agent_run.output_text = result.reply_text
             agent_run.model = result.model
@@ -75,13 +85,22 @@ class ConversationProcessingService:
                 content=result.reply_text,
             )
             self.db.add(outbound)
-            self.db.flush()
+            self.db.commit()
 
-            self.evolution_service.send_text_message(
-                conversation.whatsapp_instance.instance_name,
-                conversation.customer.phone,
-                result.reply_text,
-            )
+            try:
+                response = self.evolution_service.send_text_message(
+                    conversation.whatsapp_instance.instance_name,
+                    conversation.customer.phone,
+                    result.reply_text,
+                )
+                from app.api.routes.whatsapp_instances import _extract_evolution_instance_id
+                # Evolution sendText response sometimes has the message ID, let's try to capture it
+                evo_msg_id = response.get("key", {}).get("id") or response.get("messageId")
+                if evo_msg_id:
+                    outbound.evolution_message_id = evo_msg_id
+            except Exception as e:
+                # If sending fails, we should still commit the error state later
+                raise e
 
             conversation.last_intent = result.intent
             conversation.last_agent_processed_at = last_message.created_at
@@ -120,6 +139,17 @@ class ConversationProcessingService:
                 select(Message).where(*conditions).order_by(Message.created_at, Message.id)
             )
         )
+
+    def _conversation_history(self, conversation: Conversation, limit: int = 30) -> list[Message]:
+        messages = list(
+            self.db.scalars(
+                select(Message)
+                .where(Message.conversation_id == conversation.id)
+                .order_by(Message.created_at.desc())
+                .limit(limit)
+            )
+        )
+        return messages[::-1]
 
     def _upsert_lead(self, conversation: Conversation, result: AgentResult) -> Lead:
         lead = self.db.scalar(select(Lead).where(Lead.conversation_id == conversation.id))
