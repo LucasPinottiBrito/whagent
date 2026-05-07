@@ -9,8 +9,6 @@ RUN addgroup --system app && adduser --system --ingroup app app
 
 COPY pyproject.toml ./
 COPY app ./app
-COPY alembic.ini ./alembic.ini
-COPY alembic ./alembic
 RUN pip install --no-cache-dir .
 COPY alembic.ini ./alembic.ini
 COPY alembic ./alembic
