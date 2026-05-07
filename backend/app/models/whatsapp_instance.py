@@ -20,4 +20,6 @@ class WhatsAppInstance(IdMixin, TimestampMixin, Base):
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     store = relationship("Store", back_populates="whatsapp_instances")
-    conversations = relationship("Conversation", back_populates="whatsapp_instance")
+    conversations = relationship(
+        "Conversation", back_populates="whatsapp_instance", passive_deletes=True
+    )
