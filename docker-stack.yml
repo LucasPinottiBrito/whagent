@@ -10,7 +10,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - whagent_net
+      - PinottiNet
     deploy:
       replicas: 1
       restart_policy:
@@ -25,7 +25,7 @@ services:
     volumes:
       - redis_data:/data
     networks:
-      - whagent_net
+      - PinottiNet
     deploy:
       replicas: 1
       restart_policy:
@@ -40,7 +40,7 @@ services:
     env_file:
       - .env
     networks:
-      - whagent_net
+      - PinottiNet
     deploy:
       replicas: 1
       restart_policy:
@@ -59,7 +59,7 @@ services:
     depends_on:
       - postgres
     networks:
-      - whagent_net
+      - PinottiNet
     deploy:
       replicas: 1
       restart_policy:
@@ -78,7 +78,7 @@ services:
       - redis
       - crm-mock
     networks:
-      - whagent_net
+      - PinottiNet
     ports:
       - target: 8000
         published: 8000
@@ -92,6 +92,16 @@ services:
         limits:
           cpus: "1.00"
           memory: 768M
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK:-PinottiNet}
+        - traefik.http.routers.whagent-api.rule=Host(`${API_DOMAIN:-api.dominio}`)
+        - traefik.http.routers.whagent-api.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}
+        - traefik.http.routers.whagent-api.tls=true
+        - traefik.http.routers.whagent-api.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencryptresolver}
+        - traefik.http.routers.whagent-api.service=whagent-api
+        - traefik.http.services.whagent-api.loadbalancer.server.port=8000
+        - traefik.http.services.whagent-api.loadbalancer.passHostHeader=true
 
   worker:
     image: whagent-worker:latest
@@ -102,7 +112,7 @@ services:
       - backend
       - redis
     networks:
-      - whagent_net
+      - PinottiNet
     deploy:
       replicas: 1
       restart_policy:
@@ -119,7 +129,7 @@ services:
     depends_on:
       - backend
     networks:
-      - whagent_net
+      - PinottiNet
     ports:
       - target: 3000
         published: 3000
@@ -133,11 +143,22 @@ services:
         limits:
           cpus: "1.00"
           memory: 512M
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK:-PinottiNet}
+        - traefik.http.routers.whagent-app.rule=Host(`${APP_DOMAIN:-app.dominio}`)
+        - traefik.http.routers.whagent-app.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}
+        - traefik.http.routers.whagent-app.tls=true
+        - traefik.http.routers.whagent-app.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencryptresolver}
+        - traefik.http.routers.whagent-app.service=whagent-app
+        - traefik.http.services.whagent-app.loadbalancer.server.port=3000
+        - traefik.http.services.whagent-app.loadbalancer.passHostHeader=true
 
 volumes:
   postgres_data:
   redis_data:
 
 networks:
-  whagent_net:
-    driver: overlay
+  PinottiNet:
+    external: true
+    name: ${TRAEFIK_DOCKER_NETWORK:-PinottiNet}
