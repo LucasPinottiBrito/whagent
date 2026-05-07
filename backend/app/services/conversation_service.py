@@ -1,4 +1,5 @@
 from sqlalchemy import desc, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.models import Conversation, Customer, Message, WhatsAppInstance
@@ -70,3 +71,11 @@ class ConversationService:
         self.db.add(message)
         self.db.flush()
         return message
+
+    def delete(self, *, conversation: Conversation) -> None:
+        try:
+            self.db.delete(conversation)
+            self.db.commit()
+        except SQLAlchemyError as exc:
+            self.db.rollback()
+            raise exc
