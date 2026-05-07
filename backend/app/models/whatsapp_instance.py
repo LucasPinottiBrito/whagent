@@ -9,7 +9,7 @@ class WhatsAppInstance(IdMixin, TimestampMixin, Base):
     __tablename__ = "whatsapp_instances"
 
     store_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("stores.id"), nullable=False, index=True
+        String(36), ForeignKey("stores.id", ondelete="CASCADE"), nullable=False, index=True
     )
     instance_name: Mapped[str] = mapped_column(
         String(120), nullable=False, unique=True, index=True
