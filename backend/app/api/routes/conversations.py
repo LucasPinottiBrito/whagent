@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import (
@@ -225,6 +225,10 @@ def delete_conversation(
     if conversation is None:
         raise HTTPException(status_code=404, detail="conversation not found")
     require_conversation_access(conversation, current_user)
+    db.execute(delete(AgentRun).where(AgentRun.conversation_id == conversation.id))
+    db.execute(delete(HandoffEvent).where(HandoffEvent.conversation_id == conversation.id))
+    db.execute(delete(Lead).where(Lead.conversation_id == conversation.id))
+    db.execute(delete(Message).where(Message.conversation_id == conversation.id))
     db.delete(conversation)
     db.commit()
     return {"status": "deleted", "conversation_id": conversation_id}
