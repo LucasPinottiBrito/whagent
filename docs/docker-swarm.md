@@ -31,9 +31,27 @@ cp .env.example .env
 
 Edite o arquivo e ajuste segredos/URLs antes do deploy.
 
+Se usar Traefik com rede externa existente, configure também:
+
+```env
+TRAEFIK_DOCKER_NETWORK=PinottiNet
+TRAEFIK_ENTRYPOINTS=websecure
+TRAEFIK_CERTRESOLVER=letsencryptresolver
+APP_DOMAIN=app.seu-dominio.com
+API_DOMAIN=api.seu-dominio.com
+```
+
+> O `docker-stack.yml` conecta **todos os serviços** na rede externa
+> `${TRAEFIK_DOCKER_NETWORK}` (padrão: `PinottiNet`) para compatibilidade
+> com o roteamento já existente do Traefik no seu ambiente.
+
 ## 3) Deploy da stack
 
 ```bash
+./scripts/deploy-stack.sh
+
+# após rebuild das imagens para incluir arquivos do Alembic no backend
+./scripts/build-images.sh
 ./scripts/deploy-stack.sh
 ```
 
