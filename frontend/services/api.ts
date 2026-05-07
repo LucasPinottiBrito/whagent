@@ -151,6 +151,30 @@ export function createApiClient(token?: string | null) {
       }),
     leads: () => apiFetch<{ items: LeadSummary[] }>("/api/leads", { token }),
     lead: (id: string) => apiFetch<LeadSummary>(`/api/leads/${id}`, { token }),
+    updateLead: (id: string, payload: Record<string, unknown>) =>
+      apiFetch<LeadSummary>(`/api/leads/${id}`, { method: "PATCH", token, bodyJson: payload }),
+    deleteLead: (id: string) =>
+      apiFetch<{ status: string }>(`/api/leads/${id}`, { method: "DELETE", token }),
+    updateInstance: (id: string, payload: Record<string, unknown>) =>
+      apiFetch<Record<string, unknown>>(`/api/whatsapp-instances/${id}`, { method: "PATCH", token, bodyJson: payload }),
+    deleteInstance: (id: string) =>
+      apiFetch<{ status: string }>(`/api/whatsapp-instances/${id}`, { method: "DELETE", token }),
+    users: () => apiFetch<{ items: Record<string, unknown>[] }>("/api/users", { token }),
+    createUser: (payload: Record<string, unknown>) =>
+      apiFetch<Record<string, unknown>>("/api/users", { method: "POST", token, bodyJson: payload }),
+    updateUser: (id: string, payload: Record<string, unknown>) =>
+      apiFetch<Record<string, unknown>>(`/api/users/${id}`, { method: "PATCH", token, bodyJson: payload }),
+    deleteUser: (id: string) =>
+      apiFetch<{ status: string }>(`/api/users/${id}`, { method: "DELETE", token }),
+    customers: () => apiFetch<{ items: Record<string, unknown>[] }>("/api/customers", { token }),
+    updateCustomer: (id: string, payload: Record<string, unknown>) =>
+      apiFetch<Record<string, unknown>>(`/api/customers/${id}`, { method: "PATCH", token, bodyJson: payload }),
+    deleteCustomer: (id: string) =>
+      apiFetch<{ status: string }>(`/api/customers/${id}`, { method: "DELETE", token }),
+    archiveConversation: (id: string) =>
+      apiFetch<{ status: string }>(`/api/conversations/${id}/archive`, { method: "POST", token }),
+    deleteConversation: (id: string) =>
+      apiFetch<{ status: string }>(`/api/conversations/${id}`, { method: "DELETE", token }),
     runtime: () => apiFetch<RuntimeState>("/api/debug/runtime", { token }),
     updateRuntime: (payload: Partial<RuntimeState>) =>
       apiFetch<RuntimeState>("/api/debug/runtime", {
