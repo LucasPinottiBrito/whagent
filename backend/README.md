@@ -39,10 +39,25 @@ docker service update --force whagent_backend
 - `GET /health`
 - `POST /api/auth/login`
 - `GET /api/auth/me`
-- `GET /api/setup/status`
-- `POST /api/setup/bootstrap`
+- `GET /api/login/status`
+- `POST /api/login/bootstrap`
 - `GET/PATCH /api/store/me`
 - `GET /api/dashboard/overview`
 - `GET/POST /api/whatsapp-instances`
 - `POST /api/webhooks/evolution/{instance_name}`
 - `POST /api/internal/conversations/{conversation_id}/process`
+
+
+## Bootstrap de admin (opcional via CLI)
+
+Se quiser criar o primeiro admin sem UI, use o script idempotente:
+
+```bash
+export BOOTSTRAP_STORE_NAME="Minha Loja"
+export BOOTSTRAP_STORE_SLUG="minha-loja"
+export BOOTSTRAP_ADMIN_EMAIL="admin@minhaloja.com"
+export BOOTSTRAP_ADMIN_PASSWORD="trocar-esta-senha"
+python scripts/bootstrap_admin.py
+```
+
+O script só cria o admin se ainda não existir usuário no banco.

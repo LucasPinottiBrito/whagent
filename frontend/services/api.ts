@@ -1,13 +1,11 @@
 import type {
   AuthToken,
-  BootstrapPayload,
   ConversationDetail,
   ConversationSummary,
   CreateInstancePayload,
   DashboardOverview,
   LeadSummary,
   RuntimeState,
-  SetupStatus,
   Store,
   WhatsAppInstance,
 } from "@/types/dashboard";
@@ -69,12 +67,6 @@ export async function apiFetch<T>(
 export function createApiClient(token?: string | null) {
   return {
     health: () => apiFetch<{ status: string }>("/health"),
-    setupStatus: () => apiFetch<SetupStatus>("/api/setup/status"),
-    bootstrap: (payload: BootstrapPayload) =>
-      apiFetch<AuthToken & { store: Store; user: CurrentUser }>("/api/setup/bootstrap", {
-        method: "POST",
-        bodyJson: payload,
-      }),
     login: (email: string, password: string) =>
       apiFetch<AuthToken>("/api/auth/login", {
         method: "POST",

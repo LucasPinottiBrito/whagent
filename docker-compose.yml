@@ -43,6 +43,20 @@ services:
     networks:
       - whagent_net
 
+
+  migrate:
+    build:
+      context: ./backend
+    command: ["alembic", "upgrade", "head"]
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+    networks:
+      - whagent_net
+    profiles:
+      - tools
+
   backend:
     build:
       context: ./backend

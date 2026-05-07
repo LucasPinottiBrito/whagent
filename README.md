@@ -7,7 +7,7 @@ Plataforma SaaS para atendimento via WhatsApp de lojas de carros com agente de I
 ```txt
 /backend   API FastAPI principal, banco, auth, webhooks, agente e integrações
 /crm-mock  API FastAPI em memória para estoque e vendedores fictícios
-/frontend  Dashboard Next.js para setup, instâncias, inbox, leads e debug
+/frontend  Dashboard Next.js para instâncias, inbox, leads e debug
 /docs      documentação complementar
 /workers   worker Redis que chama endpoint interno do backend
 /scripts   scripts auxiliares de build/deploy/logs Docker
@@ -53,7 +53,7 @@ Acessos:
 
 ## 5) Primeiro uso
 
-- Se o banco não tiver usuários, abra `/setup` no frontend.
+- Se o banco não tiver usuários, abra `/login` no frontend.
 - Opcional: popular dados demo:
 
 ```bash
@@ -80,6 +80,13 @@ Deploy da stack:
 ./scripts/deploy-stack.sh
 ```
 
+Rodar migração do banco (serviço `migrate`):
+
+```bash
+docker service update --force whagent_migrate
+docker service logs -f whagent_migrate
+```
+
 Verificar serviços e tarefas:
 
 ```bash
@@ -94,6 +101,8 @@ Logs:
 ./scripts/logs.sh worker
 ./scripts/logs.sh frontend
 ```
+
+Primeiro admin em produção: preferencialmente via tela `/login` no frontend.
 
 ## 7) Atualização em produção
 

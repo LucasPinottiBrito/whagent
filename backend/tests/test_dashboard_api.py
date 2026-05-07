@@ -62,44 +62,6 @@ class FakeEvolutionControlService:
         return {"dry_run": True}
 
 
-def test_setup_status_and_bootstrap_create_first_admin(client, db_session):
-    status = client.get("/api/setup/status")
-
-    assert status.status_code == 200
-    assert status.json()["needs_setup"] is True
-
-    response = client.post(
-        "/api/setup/bootstrap",
-        json={
-            "store_name": "Garage Prime",
-            "store_slug": "garage-prime",
-            "store_document": "12345678000100",
-            "store_phone": "5511999999999",
-            "admin_email": "owner@example.com",
-            "admin_full_name": "Owner",
-            "admin_password": "admin123",
-        },
-    )
-
-    assert response.status_code == 200
-    assert response.json()["access_token"]
-    assert db_session.scalar(select(Store).where(Store.slug == "garage-prime"))
-    assert db_session.scalar(select(User).where(User.email == "owner@example.com"))
-    assert client.get("/api/setup/status").json()["needs_setup"] is False
-
-    second = client.post(
-        "/api/setup/bootstrap",
-        json={
-            "store_name": "Outra",
-            "store_slug": "outra",
-            "admin_email": "other@example.com",
-            "admin_full_name": "Other",
-            "admin_password": "admin123",
-        },
-    )
-    assert second.status_code == 409
-
-
 def test_store_me_can_read_and_update(client, demo_data, auth_header):
     response = client.get("/api/store/me", headers=auth_header)
 

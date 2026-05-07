@@ -23,7 +23,7 @@ Regras implementadas:
 
 O painel do cliente usa apenas rotas do backend:
 
-- setup e login;
+- login;
 - dados da empresa;
 - overview operacional;
 - controle de instancias WhatsApp/Evolution;

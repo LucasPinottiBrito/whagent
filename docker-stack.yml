@@ -50,6 +50,25 @@ services:
           cpus: "0.50"
           memory: 256M
 
+
+  migrate:
+    image: whagent-backend:latest
+    command: ["alembic", "upgrade", "head"]
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+    networks:
+      - whagent_net
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: none
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+
   backend:
     image: whagent-backend:latest
     env_file:
