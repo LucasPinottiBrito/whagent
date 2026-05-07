@@ -5,19 +5,7 @@ export type AuthToken = {
   token_type: "bearer";
 };
 
-export type SetupStatus = {
-  needs_setup: boolean;
-};
 
-export type BootstrapPayload = {
-  store_name: string;
-  store_slug: string;
-  store_document?: string;
-  store_phone?: string;
-  admin_email: string;
-  admin_full_name: string;
-  admin_password: string;
-};
 
 export type Store = {
   id: string;

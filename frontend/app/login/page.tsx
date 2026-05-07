@@ -12,7 +12,6 @@ export default function LoginPage() {
 
   return (
     <LoginScreen
-      needsSetup={false}
       health={health}
       busy={busy}
       onLogin={(email, password) =>

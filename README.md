@@ -1,77 +1,139 @@
 # Whagent
 
-Plataforma SaaS simples para atendimento via WhatsApp de lojas de carros com agente de IA.
+Plataforma SaaS para atendimento via WhatsApp de lojas de carros com agente de IA.
 
-## Estrutura
+## Estrutura do projeto
 
 ```txt
-/backend   API FastAPI principal, banco, auth, webhooks, agente e integracoes
-/crm-mock  API FastAPI em memoria para estoque e vendedores ficticios
-/frontend  Dashboard Next.js para setup, instancias, inbox, leads e debug
-/docs      documentacao curta e fiel ao MVP
+/backend   API FastAPI principal, banco, auth, webhooks, agente e integrações
+/crm-mock  API FastAPI em memória para estoque e vendedores fictícios
+/frontend  Dashboard Next.js para instâncias, inbox, leads e debug
+/docs      documentação complementar
 /workers   worker Redis que chama endpoint interno do backend
+/scripts   scripts auxiliares de build/deploy/logs Docker
 ```
 
-## Rodar localmente
+## Passo a passo completo (clone -> execução)
 
-Requisitos: Python 3.11+, Docker Desktop e Node.js 20.9+ para o frontend.
+## 1) Pré-requisitos
 
-```powershell
-Copy-Item backend/.env.example backend/.env
-Copy-Item crm-mock/.env.example crm-mock/.env
-Copy-Item workers/.env.example workers/.env
-docker compose up --build
+- Git
+- Docker e Docker Compose plugin
+- (Opcional local sem Docker) Python 3.11+ e Node.js 20+
+
+## 2) Clonar repositório
+
+```bash
+git clone <URL_DO_REPOSITORIO>
+cd whagent
 ```
 
-Em outro terminal, aplique as migrations:
+## 3) Criar arquivo `.env` na raiz
 
-```powershell
+O projeto usa um `.env` já preenchido com as variáveis da aplicação.
+Garanta que esse arquivo exista em `./.env` antes de subir os containers.
+
+## 4) Rodar local com Docker Compose (desenvolvimento)
+
+```bash
+docker compose up --build -d
+```
+
+Aplicar migrations do backend:
+
+```bash
 docker compose exec backend alembic upgrade head
 ```
 
-Depois acesse o painel em `http://localhost:3000`.
+Acessos:
 
-Primeiro uso:
-
-- se o banco nao tiver usuarios, abra `/setup` e crie a empresa/admin;
-- se preferir dados demo via terminal, rode `docker compose exec backend python scripts/seed_demo_data.py`;
-- apos login, use `/app/instances` para criar/conectar a instancia Evolution;
-- use `/app/debug` para simular inbound sem WhatsApp real.
-
-Servicos:
-
-- Backend: `http://localhost:8000/health`
-- CRM mock: `http://localhost:8001/health`
 - Frontend: `http://localhost:3000`
-- PostgreSQL: `localhost:5432`
-- Redis: `localhost:6379`
+- Backend health: `http://localhost:8000/health`
+- CRM mock health: `http://localhost:8001/health`
+
+## 5) Primeiro uso
+
+- Se o banco não tiver usuários, abra `/login` no frontend.
+- Opcional: popular dados demo:
+
+```bash
+docker compose exec backend python scripts/seed_demo_data.py
+```
+
+## 6) Deploy em Docker Swarm (produção)
+
+Build de imagens:
+
+```bash
+./scripts/build-images.sh
+```
+
+Inicializar swarm (uma vez no manager):
+
+```bash
+docker swarm init
+```
+
+Deploy da stack:
+
+```bash
+./scripts/deploy-stack.sh
+```
+
+Rodar migração do banco (serviço `migrate`):
+
+```bash
+docker service update --force whagent_migrate
+docker service logs -f whagent_migrate
+```
+
+Verificar serviços e tarefas:
+
+```bash
+docker stack services whagent
+docker stack ps whagent
+```
+
+Logs:
+
+```bash
+./scripts/logs.sh backend
+./scripts/logs.sh worker
+./scripts/logs.sh frontend
+```
+
+Primeiro admin em produção: preferencialmente via tela `/login` no frontend.
+
+## 7) Atualização em produção
+
+Após alterar código:
+
+```bash
+./scripts/build-images.sh
+docker service update --force whagent_backend
+docker service update --force whagent_worker
+docker service update --force whagent_frontend
+```
+
+## 8) Remoção da stack
+
+```bash
+docker stack rm whagent
+```
+
+## Documentação detalhada
+
+- Swarm: `docs/docker-swarm.md`
+- Backend: `backend/README.md`
+- Worker: `workers/README.md`
+- Frontend: `frontend/README.md`
+- CRM Mock: `crm-mock/README.md`
 
 ## Testes
 
-```powershell
+```bash
 python -m pip install -r requirements-dev.txt
-cd backend; python -m pytest -q; cd ..
-cd crm-mock; python -m pytest -q; cd ..
-cd workers; python -m pytest -q; cd ..
+cd backend && python -m pytest -q && cd ..
+cd crm-mock && python -m pytest -q && cd ..
+cd workers && python -m pytest -q && cd ..
 ```
-
-## Debug do agente
-
-```powershell
-cd backend
-python scripts/agent_chat.py
-```
-
-O chat local nao envia mensagens para a Evolution e, por padrao, nao grava conversas no banco.
-
-## Simular inbound
-
-Com backend e banco prontos, use:
-
-```powershell
-curl -X POST http://localhost:8000/api/debug/evolution/simulate-inbound ^
-  -H "Content-Type: application/json" ^
-  -d "{\"instance_name\":\"demo-instance\",\"webhook_secret\":\"dev-evolution-webhook-secret\",\"phone\":\"5511977776666\",\"text\":\"Quero um Corolla automatico\",\"process_now\":true}"
-```
-
-Rotas `/api/debug/*` nao sao carregadas quando `APP_ENV` for `prod` ou `production`.

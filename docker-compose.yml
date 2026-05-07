@@ -1,137 +1,103 @@
 version: "3.8"
+
 services:
   postgres:
     image: postgres:16
-    container_name: whagent-postgres
     environment:
-      POSTGRES_DB: car_agent_db
-      POSTGRES_USER: car_agent_user
-      POSTGRES_PASSWORD: car_agent_password
+      POSTGRES_DB: ${POSTGRES_DB:-car_agent_db}
+      POSTGRES_USER: ${POSTGRES_USER:-car_agent_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-car_agent_password}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - PinottiNet
+      - whagent_net
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U car_agent_user -d car_agent_db" ]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-car_agent_user} -d ${POSTGRES_DB:-car_agent_db}"]
+      interval: 10s
       timeout: 5s
       retries: 10
 
   redis:
     image: redis:7
-    container_name: whagent-redis
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
-      - PinottiNet
+      - whagent_net
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
-      interval: 5s
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
       timeout: 5s
       retries: 10
 
   crm-mock:
-    build: ./crm-mock
-    container_name: whagent-crm-mock
+    build:
+      context: ./crm-mock
     env_file:
-      - ./crm-mock/.env
+      - .env
     ports:
       - "8001:8001"
     networks:
-      - PinottiNet
+      - whagent_net
+
+
+  migrate:
+    build:
+      context: ./backend
+    command: ["alembic", "upgrade", "head"]
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+    networks:
+      - whagent_net
+    profiles:
+      - tools
 
   backend:
-    build: ./backend
-    container_name: whagent-backend
+    build:
+      context: ./backend
     env_file:
-      - ./backend/.env
+      - .env
     depends_on:
       - postgres
       - redis
       - crm-mock
+    ports:
+      - "8000:8000"
     networks:
-      - PinottiNet
-    deploy:
-      mode: replicated
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
-      resources:
-        limits:
-          cpus: "1"
-          memory: 1024M
-      restart_policy:
-        condition: on-failure
-      labels:
-        - traefik.enable=true
-        - traefik.http.routers.whagent_backend.rule=Host(`api-whagent.pinottiautomacoes.online`)
-        - traefik.http.routers.whagent_backend.entrypoints=websecure
-        - traefik.http.routers.whagent_backend.tls.certresolver=letsencryptresolver
-        - traefik.http.routers.whagent_backend.service=whagent_backend
-        - traefik.http.services.whagent_backend.loadbalancer.server.port=8000
-        - traefik.http.services.whagent_backend.loadbalancer.passHostHeader=true
+      - whagent_net
 
-  workers:
-    build: ./workers
-    container_name: whagent-workers
+  worker:
+    build:
+      context: ./workers
     env_file:
-      - ./workers/.env
+      - .env
     depends_on:
       - backend
       - redis
     networks:
-      - PinottiNet
-    deploy:
-      mode: replicated
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
-      resources:
-        limits:
-          cpus: "1"
-          memory: 512M
-      restart_policy:
-        condition: on-failure
+      - whagent_net
 
   frontend:
-    build: ./frontend
-    container_name: whagent-frontend
+    build:
+      context: ./frontend
+    env_file:
+      - .env
     depends_on:
       - backend
+    ports:
+      - "3000:3000"
     networks:
-      - PinottiNet
-    deploy:
-      mode: replicated
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
-      resources:
-        limits:
-          cpus: "1"
-          memory: 1024M
-      restart_policy:
-        condition: on-failure
-      labels:
-        - traefik.enable=true
-        - traefik.http.routers.whagent_frontend.rule=Host(`whagent.pinottiautomacoes.online`)
-        - traefik.http.routers.whagent_frontend.entrypoints=websecure
-        - traefik.http.routers.whagent_frontend.tls.certresolver=letsencryptresolver
-        - traefik.http.routers.whagent_frontend.service=whagent_frontend
-        - traefik.http.services.whagent_frontend.loadbalancer.server.port=3000
-        - traefik.http.services.whagent_frontend.loadbalancer.passHostHeader=true
+      - whagent_net
 
 volumes:
   postgres_data:
   redis_data:
 
 networks:
-  PinottiNet:
-    external: true
-    name: PinottiNet
+  whagent_net:
+    driver: bridge

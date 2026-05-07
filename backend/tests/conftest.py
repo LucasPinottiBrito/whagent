@@ -48,8 +48,8 @@ class FakeAgentService:
         self.calls = []
         self.fail = False
 
-    def run(self, *, customer_input: str, context: dict | None = None) -> AgentResult:
-        self.calls.append({"customer_input": customer_input, "context": context or {}})
+    def run(self, *, customer_input: str, context: dict | None = None, history: list[dict] | None = None) -> AgentResult:
+        self.calls.append({"customer_input": customer_input, "context": context or {}, "history": history or []})
         if self.fail:
             raise RuntimeError("agent exploded")
         return AgentResult(

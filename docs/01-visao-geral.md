@@ -9,6 +9,6 @@ Componentes:
 - `backend`: API principal, banco, auth, webhooks, agente, leads e handoff.
 - `workers`: polling Redis, lock e chamada ao endpoint interno do backend.
 - `crm-mock`: estoque e vendedores ficticios em memoria.
-- `frontend`: dashboard operacional para setup, login, instancias Evolution, inbox, leads, empresa e debug local.
+- `frontend`: dashboard operacional para login, instancias Evolution, inbox, leads, empresa e debug local.
 
-No primeiro acesso, o painel chama `GET /api/setup/status`. Se nao houver usuarios, `/setup` cria a primeira loja e o primeiro admin. Depois disso, o bootstrap publico passa a retornar conflito e o acesso normal ocorre via login JWT local.
+No primeiro startup com banco novo, o backend cria automaticamente um admin padrao (`admin@whagent.local` / `admin123`) caso nao exista nenhum usuario admin. O acesso inicial ocorre por `/login`.
