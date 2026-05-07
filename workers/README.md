@@ -1,11 +1,39 @@
 # Workers
 
-Worker simples que observa Redis e chama o endpoint interno do backend.
+Worker que observa Redis e chama endpoint interno do backend.
 
-Ele nao acessa PostgreSQL, OpenAI, Evolution API nem CRM mock.
+## Execução local (sem Docker)
 
-```powershell
-Copy-Item .env.example .env
+```bash
 python -m pip install -e .[dev]
 python -m app.main
+```
+
+## Execução com Docker Compose
+
+A partir da raiz do projeto:
+
+```bash
+docker compose up --build -d worker redis backend
+```
+
+Logs:
+
+```bash
+docker compose logs -f worker
+```
+
+## Deploy com Swarm
+
+Worker usa imagem `whagent-worker:latest` e comando `python -m app.main`.
+
+```bash
+docker build -t whagent-worker:latest ./workers
+docker service update --force whagent_worker
+```
+
+## Escalar workers
+
+```bash
+docker service scale whagent_worker=2
 ```
