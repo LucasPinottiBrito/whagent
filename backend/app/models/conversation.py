@@ -11,13 +11,13 @@ class Conversation(IdMixin, TimestampMixin, Base):
     __tablename__ = "conversations"
 
     store_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("stores.id"), nullable=False, index=True
+        String(36), ForeignKey("stores.id", ondelete="CASCADE"), nullable=False, index=True
     )
     customer_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("customers.id"), nullable=False, index=True
+        String(36), ForeignKey("customers.id", ondelete="CASCADE"), nullable=False, index=True
     )
     whatsapp_instance_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("whatsapp_instances.id"), nullable=False, index=True
+        String(36), ForeignKey("whatsapp_instances.id", ondelete="CASCADE"), nullable=False, index=True
     )
     status: Mapped[str] = mapped_column(String(40), nullable=False, default="ai_active")
     ai_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
@@ -44,7 +44,11 @@ class Conversation(IdMixin, TimestampMixin, Base):
     customer = relationship("Customer", back_populates="conversations")
     whatsapp_instance = relationship("WhatsAppInstance", back_populates="conversations")
     assigned_salesperson = relationship("User", foreign_keys=[assigned_salesperson_id])
-    messages = relationship("Message", back_populates="conversation")
-    lead = relationship("Lead", back_populates="conversation", uselist=False)
-    handoff_events = relationship("HandoffEvent", back_populates="conversation")
-    agent_runs = relationship("AgentRun", back_populates="conversation")
+    messages = relationship("Message", back_populates="conversation", passive_deletes=True)
+    lead = relationship(
+        "Lead", back_populates="conversation", uselist=False, passive_deletes=True
+    )
+    handoff_events = relationship(
+        "HandoffEvent", back_populates="conversation", passive_deletes=True
+    )
+    agent_runs = relationship("AgentRun", back_populates="conversation", passive_deletes=True)

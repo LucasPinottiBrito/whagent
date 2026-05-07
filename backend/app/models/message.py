@@ -18,7 +18,7 @@ class Message(IdMixin, TimestampMixin, Base):
     )
 
     conversation_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("conversations.id"), nullable=False, index=True
+        String(36), ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False, index=True
     )
     direction: Mapped[str] = mapped_column(String(20), nullable=False)
     sender_type: Mapped[str] = mapped_column(String(20), nullable=False)

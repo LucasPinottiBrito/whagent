@@ -18,7 +18,7 @@ class Lead(IdMixin, TimestampMixin, Base):
         String(36), ForeignKey("customers.id"), nullable=False, index=True
     )
     conversation_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("conversations.id"), nullable=False, index=True
+        String(36), ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False, index=True
     )
     status: Mapped[str] = mapped_column(String(40), nullable=False, default="new")
     score: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
