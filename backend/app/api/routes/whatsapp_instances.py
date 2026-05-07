@@ -130,10 +130,7 @@ def delete_instance(
     evolution_service: EvolutionService = Depends(get_evolution_service),
 ):
     instance = _get_instance_for_user(db, instance_id, current_user)
-    try:
-        evolution_service.delete_instance(instance.instance_name)
-    except (EvolutionConfigError, EvolutionApiError) as exc:
-        logger.warning("Evolution delete_instance failed (proceeding with DB delete): %s", exc)
+    _safe_delete_evolution_instance(evolution_service, instance.instance_name)
     db.delete(instance)
     db.commit()
     return {"status": "deleted", "instance_id": instance_id}
@@ -219,6 +216,17 @@ def logout_instance(
     instance.active = False
     db.commit()
     return result
+
+
+def _safe_delete_evolution_instance(
+    evolution_service: EvolutionService, instance_name: str
+) -> None:
+    try:
+        evolution_service.delete_instance(instance_name)
+    except (EvolutionConfigError, EvolutionApiError) as exc:
+        logger.warning(
+            "Evolution delete_instance failed (proceeding with DB delete): %s", exc
+        )
 
 
 def _get_instance_for_user(
