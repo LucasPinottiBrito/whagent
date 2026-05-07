@@ -85,10 +85,8 @@ services:
     env_file:
       - ./workers/.env
     depends_on:
-      backend:
-        condition: service_started
-      redis:
-        condition: service_healthy
+      - backend
+      - redis
     networks:
       - PinottiNet
     deploy:
