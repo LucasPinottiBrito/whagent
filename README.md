@@ -30,8 +30,13 @@ cd whagent
 
 ## 3) Criar arquivo `.env` na raiz
 
-O projeto usa um `.env` já preenchido com as variáveis da aplicação.
-Garanta que esse arquivo exista em `./.env` antes de subir os containers.
+Use **somente** o arquivo de ambiente da raiz (fonte única para Compose/Swarm):
+
+```bash
+cp .env.example .env
+```
+
+Depois edite o `./.env` com segredos e URLs reais da sua VPS.
 
 ## 4) Rodar local com Docker Compose (desenvolvimento)
 
