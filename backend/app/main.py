@@ -44,10 +44,10 @@ def ensure_default_admin() -> None:
 
         admin = User(
             store_id=store.id,
-            email="admin@whagent.local",
+            email=settings.admin_email,
             full_name="Administrador",
             role="admin",
-            hashed_password=hash_password("admin123"),
+            hashed_password=hash_password(settings.admin_password),
             is_active=True,
         )
         db.add(admin)

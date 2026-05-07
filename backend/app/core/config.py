@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     debug_allow_from_me_as_inbound: bool = False
     cors_origins: str = "http://localhost:3000"
 
+    admin_email: str = "admin@whagent.local"
+    admin_password: str = "admin123"
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [item.strip() for item in self.cors_origins.split(",") if item.strip()]
