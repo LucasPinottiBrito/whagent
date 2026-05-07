@@ -9,7 +9,7 @@ class AgentRun(IdMixin, TimestampMixin, Base):
     __tablename__ = "agent_runs"
 
     conversation_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("conversations.id"), nullable=False, index=True
+        String(36), ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False, index=True
     )
     input_text: Mapped[str] = mapped_column(Text, nullable=False)
     output_text: Mapped[str | None] = mapped_column(Text, nullable=True)

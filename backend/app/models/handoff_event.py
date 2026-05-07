@@ -9,7 +9,7 @@ class HandoffEvent(IdMixin, TimestampMixin, Base):
     __tablename__ = "handoff_events"
 
     conversation_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("conversations.id"), nullable=False, index=True
+        String(36), ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False, index=True
     )
     salesperson_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("users.id"), nullable=True, index=True
