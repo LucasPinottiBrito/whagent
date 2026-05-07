@@ -8,7 +8,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # You can override this at build time if needed
-ENV NEXT_PUBLIC_API_BASE_URL=https://api-whagent.pinottiautomacoes.online
+ENV NEXT_PUBLIC_API_BASE_URL=https://api.pinottiautomacoes.online
 RUN npm run build
 
 FROM node:20-alpine AS runner

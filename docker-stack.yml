@@ -92,6 +92,8 @@ services:
       replicas: 1
       restart_policy:
         condition: on-failure
+        delay: 5s
+        max_attempts: 10
       resources:
         limits:
           cpus: "1.00"
@@ -121,6 +123,8 @@ services:
       replicas: 1
       restart_policy:
         condition: on-failure
+        delay: 5s
+        max_attempts: 10
       resources:
         limits:
           cpus: "1.00"
@@ -143,6 +147,8 @@ services:
       replicas: 1
       restart_policy:
         condition: on-failure
+        delay: 5s
+        max_attempts: 10
       resources:
         limits:
           cpus: "1.00"
