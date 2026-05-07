@@ -1,6 +1,8 @@
+version: "3.8"
 services:
   postgres:
     image: postgres:16
+    container_name: whagent-postgres
     environment:
       POSTGRES_DB: car_agent_db
       POSTGRES_USER: car_agent_user
@@ -9,6 +11,8 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - PinottiNet
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U car_agent_user -d car_agent_db"]
       interval: 5s
@@ -17,10 +21,13 @@ services:
 
   redis:
     image: redis:7
+    container_name: whagent-redis
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    networks:
+      - PinottiNet
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -29,13 +36,17 @@ services:
 
   crm-mock:
     build: ./crm-mock
+    container_name: whagent-crm-mock
     env_file:
       - ./crm-mock/.env
     ports:
       - "8001:8001"
+    networks:
+      - PinottiNet
 
   backend:
     build: ./backend
+    container_name: whagent-backend
     env_file:
       - ./backend/.env
     depends_on:
@@ -45,11 +56,32 @@ services:
         condition: service_healthy
       crm-mock:
         condition: service_started
-    ports:
-      - "8000:8000"
+    networks:
+      - PinottiNet
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1024M
+      restart_policy:
+        condition: on-failure
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.whagent_backend.rule=Host(`api-whagent.pinottiautomacoes.online`)
+        - traefik.http.routers.whagent_backend.entrypoints=websecure
+        - traefik.http.routers.whagent_backend.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.whagent_backend.service=whagent_backend
+        - traefik.http.services.whagent_backend.loadbalancer.server.port=8000
+        - traefik.http.services.whagent_backend.loadbalancer.passHostHeader=true
 
   workers:
     build: ./workers
+    container_name: whagent-workers
     env_file:
       - ./workers/.env
     depends_on:
@@ -57,7 +89,54 @@ services:
         condition: service_started
       redis:
         condition: service_healthy
+    networks:
+      - PinottiNet
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+
+  frontend:
+    build: ./frontend
+    container_name: whagent-frontend
+    depends_on:
+      - backend
+    networks:
+      - PinottiNet
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1024M
+      restart_policy:
+        condition: on-failure
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.whagent_frontend.rule=Host(`whagent.pinottiautomacoes.online`)
+        - traefik.http.routers.whagent_frontend.entrypoints=websecure
+        - traefik.http.routers.whagent_frontend.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.whagent_frontend.service=whagent_frontend
+        - traefik.http.services.whagent_frontend.loadbalancer.server.port=3000
+        - traefik.http.services.whagent_frontend.loadbalancer.passHostHeader=true
 
 volumes:
   postgres_data:
   redis_data:
+
+networks:
+  PinottiNet:
+    external: true
+    name: PinottiNet

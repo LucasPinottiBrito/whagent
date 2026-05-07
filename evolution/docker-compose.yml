@@ -2,6 +2,8 @@ services:
   evolution-api:
     image: ${EVOLUTION_API_IMAGE:-evoapicloud/evolution-api:v2.3.7}
     container_name: whatsapp-agent-evolution-api
+    networks:
+      - PinottiNet
     restart: unless-stopped
     env_file:
       - .env
@@ -14,11 +16,31 @@ services:
       - "8080:8080"
     volumes:
       - evolution_instances:/evolution/instances
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1024M
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.evolution.rule=Host(`evolution.pinottiautomacoes.online`)
+        - traefik.http.routers.evolution.entrypoints=websecure
+        - traefik.http.routers.evolution.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.evolution.service=evolution_api
+        - traefik.http.services.evolution_api.loadbalancer.server.port=8080
+        - traefik.http.services.evolution_api.loadbalancer.passHostHeader=true
 
   evolution-postgres:
     image: postgres:15
     container_name: whatsapp-agent-evolution-postgres
     restart: unless-stopped
+    networks:
+      - PinottiNet
     environment:
       POSTGRES_DB: ${POSTGRES_DATABASE:-evolution}
       POSTGRES_USER: ${POSTGRES_USERNAME:-evolution}
@@ -36,6 +58,8 @@ services:
   evolution-redis:
     image: redis:7
     container_name: whatsapp-agent-evolution-redis
+    networks:
+      - PinottiNet
     restart: unless-stopped
     command: redis-server --appendonly yes
     ports:
@@ -48,7 +72,13 @@ services:
       timeout: 5s
       retries: 10
 
+
 volumes:
   evolution_instances:
   evolution_postgres_data:
   evolution_redis_data:
+
+networks:
+  PinottiNet:
+    external: true
+    name: PinottiNet
