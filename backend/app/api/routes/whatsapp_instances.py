@@ -2,12 +2,12 @@ import logging
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db, get_evolution_service
 from app.core.config import get_settings
-from app.models import User, WhatsAppInstance
+from app.models import AgentRun, Conversation, HandoffEvent, Lead, Message, User, WhatsAppInstance
 from app.schemas.dashboard import WhatsAppInstanceCreateRequest
 from app.services.evolution_service import (
     EvolutionApiError,
@@ -134,6 +134,21 @@ def delete_instance(
         evolution_service.delete_instance(instance.instance_name)
     except (EvolutionConfigError, EvolutionApiError) as exc:
         logger.warning("Evolution delete_instance failed (proceeding with DB delete): %s", exc)
+
+    conversation_ids = list(
+        db.scalars(
+            select(Conversation.id).where(Conversation.whatsapp_instance_id == instance.id)
+        )
+    )
+    if conversation_ids:
+        db.execute(delete(AgentRun).where(AgentRun.conversation_id.in_(conversation_ids)))
+        db.execute(
+            delete(HandoffEvent).where(HandoffEvent.conversation_id.in_(conversation_ids))
+        )
+        db.execute(delete(Lead).where(Lead.conversation_id.in_(conversation_ids)))
+        db.execute(delete(Message).where(Message.conversation_id.in_(conversation_ids)))
+        db.execute(delete(Conversation).where(Conversation.id.in_(conversation_ids)))
+
     db.delete(instance)
     db.commit()
     return {"status": "deleted", "instance_id": instance_id}
@@ -266,4 +281,3 @@ def _extract_connection_state(payload: dict) -> str | None:
     if isinstance(instance, dict):
         return instance.get("state") or instance.get("connectionStatus")
     return payload.get("state") if isinstance(payload, dict) else None
-
