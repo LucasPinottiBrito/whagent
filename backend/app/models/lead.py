@@ -12,10 +12,10 @@ class Lead(IdMixin, TimestampMixin, Base):
     __table_args__ = (UniqueConstraint("conversation_id", name="uq_lead_conversation"),)
 
     store_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("stores.id"), nullable=False, index=True
+        String(36), ForeignKey("stores.id", ondelete="CASCADE"), nullable=False, index=True
     )
     customer_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("customers.id"), nullable=False, index=True
+        String(36), ForeignKey("customers.id", ondelete="CASCADE"), nullable=False, index=True
     )
     conversation_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False, index=True
