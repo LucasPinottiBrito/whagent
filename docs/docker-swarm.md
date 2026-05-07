@@ -21,6 +21,16 @@ docker build -t whagent-crm-mock:latest ./crm-mock
 docker swarm init
 ```
 
+## 2.1) Preparar variáveis de ambiente (obrigatório)
+
+O deploy Swarm consome **apenas** o `.env` da raiz do repositório (referenciado por `env_file: .env` no `docker-stack.yml`).
+
+```bash
+cp .env.example .env
+```
+
+Edite o arquivo e ajuste segredos/URLs antes do deploy.
+
 ## 3) Deploy da stack
 
 ```bash
