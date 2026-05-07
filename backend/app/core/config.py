@@ -12,7 +12,7 @@ class Settings(BaseSettings):
 
     database_url: str = (
         "postgresql+psycopg://car_agent_user:car_agent_password"
-        "@whagent-postgres:5432/car_agent_db"
+        "@postgres:5432/car_agent_db"
     )
 
     jwt_secret_key: str = "change-me"
@@ -29,9 +29,9 @@ class Settings(BaseSettings):
     evolution_api_key: str = ""
     webhook_public_base_url: str = "http://localhost:8000"
 
-    crm_mock_base_url: str = "http://whagent-crm-mock:8001"
+    crm_mock_base_url: str = "http://crm-mock:8001"
 
-    redis_url: str = "redis://whagent-redis:6379/0"
+    redis_url: str = "redis://redis:6379/0"
     agent_debounce_seconds: int = 8
     conversation_lock_seconds: int = 60
 
